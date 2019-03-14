@@ -16,17 +16,18 @@ class Files extends Component {
 				<List
 					dataSource={this.state.data}
 					renderRow={(row) => (
-						<ListItem key={row} ripple>
-							<Link
-								to={{ pathname: '/code', state: { file_name: row } }}
-								style={{ textDecoration: 'none', color: '#212121' }}
-							>
+						<Link
+							key={row}
+							to={{ pathname: '/code', state: { file_name: row } }}
+							style={{ textDecoration: 'none', color: '#212121' }}
+						>
+							<ListItem key={row} ripple>
 								<div className="file-list">
 									<i className="fab fa-js-square" />
 									<span>{row}</span>
 								</div>
-							</Link>
-						</ListItem>
+							</ListItem>
+						</Link>
 					)}
 				/>
 			</div>

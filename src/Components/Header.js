@@ -1,5 +1,6 @@
 import React, { Component } from 'react';
 import { Toolbar, Icon, ToolbarButton, BackButton } from 'react-onsenui';
+import { Link } from 'react-router-dom';
 
 class Header extends Component {
 	constructor(props) {
@@ -13,7 +14,13 @@ class Header extends Component {
 	render() {
 		return (
 			<Toolbar>
-				<div className="left">{this.state.isCodeView && <BackButton>Back</BackButton>}</div>
+				<div className="left">
+					{this.state.isCodeView && (
+						<Link to="/">
+							<BackButton>Back</BackButton>
+						</Link>
+					)}
+				</div>
 				<div className="center">{this.props.title}</div>
 				<div className="right">
 					<ToolbarButton onClick={this.props.openSideNav}>
