@@ -31,3 +31,9 @@ code {
 	text-decoration: none;
 	color: #212121;
 }
+
+#side-nav a {
+	color: green;
+	background-color: crimson;
+	text-decoration: none;
+}
