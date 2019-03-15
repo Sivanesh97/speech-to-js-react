@@ -4,6 +4,7 @@ import { Page, Splitter, SplitterSide, SplitterContent } from 'react-onsenui';
 import Fixed from './Fixed';
 import SideNavContents from './SideNavContents';
 import Files from './Files';
+import Speech from '../Speech';
 
 class Main extends Component {
 	constructor(props) {
