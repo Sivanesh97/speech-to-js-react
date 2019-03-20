@@ -6,6 +6,9 @@ import SideNavContents from './SideNavContents';
 import Prism from 'prismjs';
 import './../prism.css';
 import './../CodeView.css';
+import recognition from '../js/speech'
+import Util from '../js/util'
+import {processing } from '../js/js'
 
 class CodeView extends Component {
 	constructor(props) {
@@ -29,7 +32,21 @@ class CodeView extends Component {
 		};
 	}
 
+	startSpeech() {
+		let word = ''
+		recognition.addEventListener('result', event => {
+			word = event.results[0][0].transcript
+			console.log(`Input `, word)
+			if (!word.startsWith(`quit`))
+				processing(word)
+		})
+	}
+
 	componentDidMount() {
+		this.startSpeech()
+		
+
+
 		Prism.highlightAll(false, this.state.data);
 		// let highLightCode = Prism.highlightAll(false, () => {
 		// 	return this.state.code;
