@@ -1,704 +1,553 @@
-import {Arrow, List, Obj, BuiltInMethod, Console, MultiLineComment, Function, ConditionalWithArgs, For, SingleLineComment} from './util'
+import { List, Obj, ArrowFunction, Condition, MultiLineComment, Function } from './util';
+let code = [];
+let scope = [];
 
-let code = []
-let scope = []
-let temp = []
+// async function tester() {
+// 	await dictated.forEach((item) => {
+// 		console.log(item);
+// 		setTimeout(() => {
+// 			processing(item);
+// 		}, 2000);
+// 	});
+// 	printCode();
+// }
 
+// tester();
 
-
-/* async function tester() {
-    await dictated.forEach(item => {
-        console.log(item)
-        processing(item)
-    })
-    printCode()    
-}
-
-tester()
-
-*/
 // The if chain
-
-
-/* differenciate args for input (arg0 arg1)  and pass (arg0, arg1 ) 
-   for
-   do while
-   obj
-   list
-   align tthe data
-
-*/
 export function processing(string) {
-     string = string.toLowerCase()
-     string = string.replace("."," dot ")	 // var_name.method_name => var_name dot method_name
-	 string = string.replace(/equals/g,`=`)
-	 string = string.replace(/value/g,`:`)    // name value string santhosh  => name : 'santhosh'
-    let strArray = string.split(" ")
-	//strArray = strArray.map( data => { return operationHandler(data) })
-    switch (true) {
-		case string.startsWith('arguments'):       // string santhosh kumar next 0 next 5 next temp
-             assignArguments(strArray.slice(1))     // [string,santhosh,kumar,next,0,next,5,next,temp]
-             break
-		case strArray.indexOf(`=`) != -1 :
-		     variableDeclaration(string, strArray)
-			 break 
-		case strArray.indexOf(`:`) != -1:
-             variableDeclaration(string, strArray)
-             break; 		
-		case string.split("dot").length == 2:	
-             builtInMethods(string)
-	         break	 
-        case string.startsWith('function'):
-             functionCreator(strArray.slice(1))
-             break
-		 case string.startsWith('call'):
-             call(methodNameCreator(strArray.slice(1)))
-             break	 
+	string = string.toLowerCase();
+	string = string.replace(/equals/g, '=');
+	string = string.replace(/dot/g, '.');
+	let strArray = string.split(' ');
+
+	if (scope.length !== 0 && string !== 'close') {
+		if (scope.slice(-1)[0].type === 'list') {
+			let args = string.split('comma');
+			args = args.map((item) => typeDefiner(item.trim(), undefined, false));
+			if (args != '') {
+				scopeAssigner(args);
+			}
+			return;
+		} else if (scope.slice(-1)[0].type === 'object') {
+			strArray = string.split('value');
+			if (strArray.length <= 1) {
+				console.warn('Inside object value must be given as <key> "Value" <value>');
+				return;
+			}
+			let variable = strArray[0].trim().split(' ').join('_');
+			let assignment = typeDefiner(strArray[1].trim(), variable, true);
+			if (!assignment) {
+				return null;
+			}
+			if (assignment && assignment.type === 'object') {
+				return;
+			}
+			let key_val = `\n${variable}: ${assignment}`;
+			scopeAssigner(key_val);
+
+			return;
+		} else if (scope.slice(-1)[0].type === 'comment') {
+			scopeAssigner(string);
+			return;
+		}
+	}
+
+	switch (true) {
+		case string.indexOf('.') !== -1:
+			objectMethodCall(string);
+			break;
+		case string.startsWith('let'):
+			declaration(strArray.shift(), strArray);
+			break;
+		case string.startsWith('constant'):
+			declaration('const', strArray.slice(1));
+			break;
+		case string.startsWith('variable'):
+			declaration('var', strArray.slice(1));
+			break;
+		case string.indexOf('=') > 0:
+			normalAssignment(string);
+			break;
+		case string.startsWith('function'):
+			functionCreator(strArray.slice(1));
+			break;
+		case string.startsWith('arguments'):
+			assignArguments(strArray.slice(1));
+			break;
+		case string.startsWith('close'):
+			scopeRemover();
+			break;
+		case string.startsWith('undo'):
+			undo();
+			break;
+		case string.startsWith('return'):
+			returnToFunction(strArray.slice(1));
+			break;
+		case string.startsWith('operation'):
+			operationsParser(strArray.slice(1));
+			break;
+		case string.startsWith('comment paragraph'):
+			commentCreator(strArray.slice(2));
+			break;
+		case string.startsWith('comment'):
+			comment(strArray.slice(1));
+			break;
+		case string.startsWith('object'):
+			objectCreator(strArray.slice(1));
+			break;
 		case string.startsWith('if'):
-		     conditionalCreator(`if`)
-			 break
+			conditionalCreator(`if`, strArray.slice(1));
+			break;
 		case string.startsWith('else if'):
-		     conditionalCreator(`else if`)
-			 break
-        case string.startsWith('else'):
-		     conditionalCreator(`else`)
-			 break			
+			conditionalCreator(`else if`, strArray.slice(2));
+			break;
+		case string.startsWith('else'):
+			conditionalCreator(`else`, strArray.slice(1));
+			break;
 		case string.startsWith('while'):
-		     conditionalCreator(`while`)
-			 break
+			conditionalCreator(`while`, strArray.slice(1));
+			break;
 		case string.startsWith('do while'):
-             conditionalCreator(`do while`)
-			 break 		
+			conditionalCreator(`do while`, strArray.slice(2));
+			break;
 		case string.startsWith('switch'):
-             conditionalCreator(`switch`)
-			 break
-        case string.startsWith('case'):
-             conditionalCreator(`case`)	
-             break	
+			conditionalCreator(`switch`, strArray.slice(1));
+			break;
+		case string.startsWith('case'):
+			conditionalCreator(`case`, strArray.slice(1));
+			break;
 		case string.startsWith(`default`):
-  		     conditionalCreator(`default`)	
-             break
-        case string.startsWith('close'):
-            scopeRemover()
-            break
-        case string.startsWith('undo'):
-            undo()
-            break
+			conditionalCreator(`default`);
+			break;
+		case string.startsWith('undo') || string.startsWith('revert'):
+			undo();
+			break;
 		case string.startsWith('clear'):
-            clear()
-            break		   
-       /* case string.startsWith('redo'):
-            redo()
-            break */
-        case string.startsWith('return'):
-            returnToFunction(strArray.slice(1))
-            break
-        case string.startsWith('comment paragraph'):
-            commentCreator()
-            break
-        case string.startsWith('comment'):
-            comment(strArray.slice(1))
-            break
-        default: 
-            simpleWordConversions(strArray) 
-    }
-}
-
-function variableDeclaration(string, strArray) {
-	switch(true) {
-		case strArray.slice(strArray.indexOf(`=`) + 1).join(" ").startsWith('object'):
-             objectCreator( string, strArray.slice(0, strArray.indexOf(`=`)) )
-			 break
-		case strArray.slice(strArray.indexOf(`:`) + 1).join(" ").startsWith('object'):
-             objectCreator(string, strArray.slice(0,strArray.indexOf(`:`)))
-			 break
-		case strArray.slice(strArray.indexOf(`=`) + 1).join(" ").startsWith('list'):
-             listCreator( string, strArray.slice(0,strArray.indexOf('=')) )
-			 break
-		case strArray.slice(strArray.indexOf(`:`) + 1).join(" ").startsWith('list'):
-             listCreator( string, strArray.slice(0,strArray.indexOf(`:`)) )
-			 break	 
-		case strArray.slice(strArray.indexOf(`=`) + 1).join(" ").startsWith('arrow function'):
-             arrowFunctionCreator(string, strArray.slice(0,strArray.indexOf('=')) )
-			 break	 
-		case strArray.slice(strArray.indexOf(`:`) + 1).join(" ").startsWith('arrow function'):
-             arrowFunctionCreator(string, strArray.slice(0,strArray.indexOf(`:`)))
-			 break	  
-        case strArray.indexOf(`:`) != -1:
-		     let assignment = strArray.slice(strArray.indexOf(":") + 1)
-			 if(assignment.join(" ").startsWith("operation"))
-		        assignment = assignment.slice(1).join(" ").split("next").map(data => { return operationCheck(data.trim()) } ).join(" ") // operation first data next plus next b next string data
-             else 
-		        assignment = assignment.join(" ").split("next").map(data => { return typeDefiner(data.trim()) } ).join(" ")
-             dataFeeder( strArray.slice(0,strArray.indexOf(`:`)).join("_") + " : " + assignment ) //key : value
-			 //scopeAssigner( strArray.slice(0,strArray.indexOf(`:`)).map(data => {return operationCheck(data) }).join(" ") + " : " + strArray.slice(strArray.indexOf(`:`)+1).map(data => {return operationCheck(data) }).join(" ") ) //key : value
-			 break			  	
-		case string.startsWith('let'):
-            declaration(strArray.shift(), strArray)
-            break
-        case string.startsWith('constant'):
-            declaration('const', strArray.slice(1))
-            break
-        case string.startsWith('variable'):
-            declaration('var', strArray.slice(1))
-            break
-        default: 
-            declaration('', strArray)				
+			clear();
+			break;
+		case string.startsWith('print'):
+			printer(strArray.slice(1));
+			break;
+		case string.startsWith('call'):
+			call(strArray.slice(1));
+			break;
+		default:
+			simpleWordConversions(strArray);
 	}
 }
 
-function arrowFunctionCreator(string, strArray) {
-	switch(true) {
-		case string.startsWith('let'):
-		    dataFeeder( new Arrow('let '+ strArray.slice(1).join("_") + ' = ', "arrow function") )
-            break
-        case string.startsWith('constant'):
-            dataFeeder( new Arrow('const '+ strArray.slice(1).join("_") + ' = ', "arrow function") )
-            break
-        case string.startsWith('variable'):
-            dataFeeder(new Arrow('variable '+ strArray.slice(1).join("_") + ' = ', "arrow function") )
-            break	
-        case string.split(" ").indexOf(`:`) != -1 :
-             dataFeeder(new Arrow(strArray.slice(0).join("_") + ' : ', "arrow function") )
-             break			
-        default: 
-            dataFeeder(new Arrow(strArray.slice(0).join("_") + " = " , "arrow function")) // say value for colon 
-	}
-}
-
-function listCreator(string, strArray) {
-	switch(true) {
-		case string.startsWith('let'):
-		    dataFeeder( new List('let '+ strArray.slice(1).join("_") + ' = ', "list") )
-            break
-        case string.startsWith('constant'):
-            dataFeeder( new List('const '+ strArray.slice(1).join("_") + ' = ', "list") )
-            break
-        case string.startsWith('variable'):
-            dataFeeder(new List('variable '+ strArray.slice(1).join("_") + ' = ', "list") )
-            break	
-		case string.split(" ").indexOf(`:`) != -1 :
-             dataFeeder(new List(strArray.slice(0).join("_") + ' : ', "list") )
-             break	
-        default: 
-            dataFeeder(new List(strArray.slice(0).join("_") + " = " , "list"))
-	}
-}
-
-function objectCreator(string, strArray) {
-	switch(true) {
-		case string.startsWith('let'):
-		    dataFeeder( new Obj('let '+ strArray.slice(1).join("_") + ' = ', "object") )
-            break
-        case string.startsWith('constant'):
-            dataFeeder( new Obj('const '+ strArray.slice(1).join("_") + ' = ', "object") )
-            break
-        case string.startsWith('variable'):
-            dataFeeder(new Obj('variable '+ strArray.slice(1).join("_") + ' = ', "object") )
-            break	
-        case string.split(" ").indexOf(`=`) != -1 :
-             dataFeeder(new Obj(strArray.slice(0).join("_") + ' = ', "object") )
-             break		
-        default: 
-            dataFeeder(new Obj(strArray.slice(0).join("_") + " : " , "object"))
-	}
-}
-
-function dataFeeder(scp) {
-	        if(scope.length > 0 ) {
-			  scopeAssigner(scp)
-		    } else if(typeof scp === "object") {
-	         scope.push(scp)
-			 code.push(scope[scope.length - 1].builder())
-			}
-			else {
-			  code.push(scp)
-			}
-			 printCode()
-}
-
-function builtInMethods(string) {                                              // first name dot methodName
-	let name = string.split("dot")[0].trim().split(" ").join("_")              //  first_name
-	let methodName = string.split("dot")[1].trim().split(" ").join("");       // methodName
-	
-	switch(true) {
-	   case string.startsWith('console'):   // say => console.log
-             consoling(methodName)
-             break
-	   case methodName.startsWith("substr"):     // methodName_built in methods
-            builtInCreator(name, `substr`)			
-            break
-       case methodName.startsWith("index"):
-	        builtInCreator(name, `indexOf`)		
-            break
-       case methodName.startsWith("last"):
-	        builtInCreator(name, `last`)
-			break 
-       case methodName.startsWith("search"):
-	        builtInCreator(name, `search`)
-			break      
-       case methodName.startsWith("slice"):
-            builtInCreator(name, `slice`)	   
-			break
-       case methodName.startsWith("replace"):   
-	        builtInCreator(name, `replace`)
-			break
-       case methodName.startsWith("upper"):
-	        builtInCreator(name, `toUpperCase`)
-			break
-       case methodName.startsWith("lower"): 
-	        builtInCreator(name, `toLowerCase`)
-       case methodName.startsWith("concatenate"):
-            builtInCreator(name, `concat`)	   
-			break
-       case methodName.startsWith("trim"):
-	        builtInCreator(name, `trim`)
-			break
-       case methodName.startsWith("character"): 
-	        builtInCreator(name, `charAt`)
-			break
-       case methodName.startsWith("split"): 
-	        builtInCreator(name, `split`)
-			break
-       case methodName.startsWith("starts"):  
-	        builtInCreator(name, `startsWith`)
-			break
-       case methodName.startsWith("ends"):   
-	        builtInCreator(name, `endsWith`)
-		    break
-       case methodName.startsWith("value"): 
-	        builtInCreator(name, `valueOf`)
-       case methodName.startsWith("includes"):
-            builtInCreator(name, `includes`)	   
-			break
-       case methodName.startsWith("match"):
-	        builtInCreator(name, `match`)
-			break
-       case methodName.startsWith("repeat"):
-	        builtInCreator(name, `repeat`)
-			break
-       case methodName.startsWith("compare"): 
-	        builtInCreator(name, `localeCompare`)
-			break
-       case methodName.startsWith("tostring"):   
-	        builtInCreator(name, `toString`)
-			break
-       case methodName.startsWith("length"):         // methodName_built in propertys     note
-            builtInProperty(name, `length`)
-			break 
-       case methodName.startsWith("exponential"):    // number_built in Methods  
-            builtInCreator(name, `toExponential`)	   
-			break
-       case methodName.startsWith("fixed"):    
-	        builtInCreator(name, `toFixed`)
-			break
-       case methodName.startsWith("precision"): 
-            builtInCreator(name, `toPrecision`)	   
-			break
-		    
-	//here user will say number.max and it will generate Number.MAX_VALUE for an indivitual recognition 
-	
-   /*  case methodName.startsWith("max"):   // methodName_built in propertys   
-            builtInProperty(`Number`,`MAX_VALUE`)   
-			break
-       case methodName.startsWith("min"):   // methodName_built in propertys
-            builtInProperty(`Number`,`MIN_VALUE`)   
-            break			
-   */ 	
-       case methodName.startsWith("join"):   // array_built in methods 
-			builtInCreator(name, `join`)
-			break
-       case methodName.startsWith("push"): 
-            builtInCreator(name, `push`)	   
-			break
-       case methodName.startsWith("pop"):  
-            builtInCreator(name, `pop`)	   
-			break
-       case methodName.startsWith("shift"):
-            builtInCreator(name, `shift`)		  
-			break
-       case methodName.startsWith("unshift"):  
-            builtInCreator(name, `unshift`)	   
-			break
-       case methodName.startsWith("splice"):   
-            builtInCreator(name, `splice`)		   
-			break
-       case methodName.startsWith("concat"):  
-            builtInCreator(name, `concat`)	   
-			break
-       case methodName.startsWith("split"):   // array_built in methods 
-	        builtInCreator(name, `split`)
-			break			
-		default: 
-		    simpleWordConversions(string.split(" "))
-			break
-			// builtInCreator(name, MethodName)
-			
-	}
-}
-
-function builtInProperty(name, propertyName) {
-	 code.push(`${name}.${propertyName}`);
-	 printCode()
-}
-
-
-function builtInCreator(name, methodName) {
-	        let scp = new BuiltInMethod(name, methodName, `builtIn`)
-			if(scope.length > 0 ) {
-			  scopeAssigner(scp)
-		    } else {
-	         scope.push(scp)
-			 code.push(scope[scope.length - 1].builder())
-			}
-			 printCode()
-}
-
-
-function declaration(type, strArray) { 
-    strArray = strArray.join(" ").replace(/equals/g, `=`).split(" "); // "variable name = string hello" => [variable, name, =, string ]  
-    let equalsIndex = strArray.indexOf(`=`)
-    let variable, assignment
-    if (equalsIndex != -1) {
-        variable = strArray.slice(0, strArray.indexOf('='))
-        assignment = strArray.slice(strArray.indexOf("=") + 1)
-		if(assignment.join(" ").startsWith("operation"))
-		     assignment = assignment.slice(1).join(" ").split("next").map(data => { return operationCheck(data.trim()) } ).join(" ") // operation first data next plus next b next string data
-        else 
-		     assignment = assignment.join(" ").split("next").map(data => { return typeDefiner(data.trim()) } ).join(" ")
+function declaration(type, strArray) {
+	let equalsIndex = strArray.indexOf(`=`);
+	let variable, assignment, predefined_assignment;
+	if (equalsIndex != -1) {
+		variable = strArray.slice(0, strArray.indexOf('='));
+		variable = variable.join('_');
+		assignment = strArray.slice(strArray.indexOf('=') + 1);
+		predefined_assignment = predefinedAssignments(type, variable, assignment);
+		if (assignment === predefined_assignment) {
+			assignment = operationsHandler(assignment.join(' '));
+		} else {
+			return;
+		}
+		console.log('[JS] declaration: assignment', assignment);
 	} else {
-        variable = strArray
-    }
-       variable = variable.join("_")		  
-	   scopeAssigner(`${type} ${variable} = ${assignment}`)
+		variable = strArray;
+		variable = variable.join('_');
+	}
+	scopeAssigner(`${type} ${variable} = ${assignment}`);
+	// code.push(`${type} ${variable} = ${assignment}`)
+	// printCode()
 }
 
-function operationCheck(data) {
-	  if( data.startsWith("string") )
-		   return typeDefiner(data)
-	return typeDefiner(operationHandler(data.trim()).trim())  // [a,plus,to be]
+function predefinedAssignments(type, variable, assignment) {
+	let string = assignment.join(' ');
+	switch (true) {
+		case string.startsWith('list'):
+			return listCreator(type, variable, assignment.slice(1));
+		case string.startsWith('object'):
+			return objectCreator(type, variable, assignment.slice(1));
+		case string.startsWith('function'):
+			return functionCreator(assignment.slice(1));
+		case string.startsWith('arrow function'):
+			return arrowFunctionCreator(type, variable, assignment.slice(2), false);
+		case string.startsWith('call'):
+			call(assignment.slice(1), type, variable);
+			break;
+		default:
+			return assignment;
+	}
 }
 
+function listCreator(type, variable, assignment, is_inside_object) {
+	let list = new List(type, variable, is_inside_object);
+	scopeAssigner(list);
+	scope.push(list);
 
-function typeDefiner(data) {
-    console.log(typeof data, data)
-    if(data.startsWith('string')) {
-        return `'${data.split(" ").slice(1).join(" ")}'`
-    } else if (!isNaN(data)) {
-        return Number(data)
-    } else if (data === "true" || data === "false") {
-        return data
-    } else {
-        return data.split(" ").join("_")
-    }	
+	if (assignment && assignment != '') {
+		processing(assignment.join(' '));
+	}
+}
+
+function objectCreator(type, variable, assignment, is_inside_object) {
+	let obj = new Obj(type, variable, is_inside_object);
+	scopeAssigner(obj);
+	scope.push(obj);
+	if (assignment && assignment != '') {
+		processing(assignment.join(' '));
+	}
+	// return obj;
+}
+
+function arrowFunctionCreator(type, variable, assignment, is_inside_object) {
+	// alert(
+	// 	`{arrowFunctionCreator} type=${type}; variable = ${variable}; assignment = ${assignment}; is_inside = ${is_inside_object}`
+	// );
+	let arrow_function = new ArrowFunction(type, variable, is_inside_object);
+	scopeAssigner(arrow_function);
+	scope.push(arrow_function);
+}
+
+function typeDefiner(data, variable, is_inside_object) {
+	// alert(`{typeDefiner} data = ${data}; variable = ${variable}; is_inside = ${is_inside_object}`);
+	console.log(typeof data, data);
+	if (typeof data === 'string' && data.startsWith('list')) {
+		data = data.split(' ');
+		return listCreator(null, variable, data.slice(1), data.slice(1));
+	} else if (data.startsWith('string')) {
+		return `'${data.split(' ').slice(1).join(' ')}'`;
+	} else if (!isNaN(parseInt(data))) {
+		return Number(data);
+	} else if (data === 'true' || data === 'false') {
+		return data;
+	}
+	if (data.startsWith('object')) {
+		if (typeof data == 'string') {
+			data = null;
+		} else {
+			data = data.slice(1);
+		}
+		return objectCreator(undefined, variable, data, is_inside_object);
+	} else if (data.startsWith('arrow function')) {
+		// TODO check and validate data and send to further arguments
+		return arrowFunctionCreator(undefined, variable, undefined, is_inside_object);
+	} else {
+		return data.split(' ').join('_');
+	}
+}
+
+function normalAssignment(string) {
+	let assignment_split = string.split('=');
+	let variable = assignment_split[0];
+	variable = variable.trim().split(' ').join('_');
+	let assignment = assignment_split[1].trim();
+	let predefined_assignment = predefinedAssignments(null, variable, assignment.split(' '));
+	if (predefined_assignment && predefined_assignment.join(' ') === assignment) {
+		assignment = predefined_assignment;
+	} else {
+		return;
+	}
+	assignment = operationsHandler(assignment.join(' '));
+	console.log('[JS] NormalAssignMent: assignment', assignment);
+	scopeAssigner(`${variable} = ${assignment}`);
+	printCode();
 }
 
 function functionCreator(strArray) {
-    console.log(strArray)
-    let functionName = methodNameCreator(strArray)
-	let method = new Function(functionName, `function`)
-	 if(scope.length > 0 ) {
-			  scopeAssigner(method)
-		    } else {
-	         scope.push(method)
-			 code.push(scope[scope.length - 1].builder())
-			}
-		printCode()
-}
-
-function call(methodName) {
-	  let scp = new Console(methodName, `call`)
-			if(scope.length > 0 ) {
-			  scopeAssigner(scp)
-		    } else {
-	         scope.push(scp)
-			 code.push(scope[scope.length - 1].builder())
-			}
-			 printCode()
-}
-
-function conditionalCreator(type)  {
-	        let scp = new ConditionalWithArgs(type)
-            if(scope.length > 0 ) {
-			  scopeAssigner(scp)
-		    } else {
-	         scope.push(scp)
-			 code.push(scope[scope.length - 1].builder())
-			}
-			 printCode()
+	console.log(strArray);
+	let functionName = methodNameCreator(strArray);
+	let method = new Function(functionName, `function`);
+	console.log('[JS] functionCreator', method);
+	scopeAssigner(method);
+	scope.push(method);
+	console.log(scope, code);
+	printCode();
 }
 
 function methodNameCreator(strArray) {
-    return strArray.map((name, index) => {
-        if (index != 0) {
-            return name[0].toUpperCase() + name.slice(1)
-        }
-        return name
-    }).join("")
-}
-
-function argPreparation(strArray) {
-	let args = strArray.join(" ").split("next")  // after split by "next" => ["string santhosh kumar ", " 0 ", " 5 "," temp "]
-        args = args.map(item => { return typeDefiner(item.trim()) }) // ["santhosh kumar",0,5,temp]
-        console.log(args.join(","))
-		args = args.map( item => {
-			                  if(isNaN(item)) 
-		                         return operationHandler(item.trim())
-							 return item;
+	return strArray
+		.map((name, index) => {
+			if (index != 0) {
+				return name[0].toUpperCase() + name.slice(1);
+			}
+			return name;
 		})
-	return args;
+		.join('');
 }
 
-// strArray = [string,santhosh,kumar,next,0,next,5,next,temp] 
 function assignArguments(strArray) {
-   let args = argPreparation(strArray)   
-     if(scope.length > 0){                            // after joining strArray by " " => "string santhosh kumar next 0 next 5 next temp"  
-		expand(scope[scope.length-1]).arguments = args;   
-		code.pop()
-		code.push(scope[scope.length - 1].builder())
-		printCode()
-      }   
-	   else {
-        console.error('Already in global scope')
-    }
-}
+	if (strArray[0] === 'clear') {
+		scope[scope.length - 1].arguments = [];
+		return;
+	} else if (strArray[0] === 'undo') {
+		scope[scope.length - 1].arguments.pop();
+		return;
+	}
 
-// note this 
+	if (scope.length != 0) {
+		let args = strArray.join(' ').split('comma');
+		args = args.map((item) => item.trim().split(' ').join('_'));
+		scope[scope.length - 1].arguments.push(args);
+		console.log('[JS] AssignArguments:', args);
+	} else {
+		console.error('Already in global scope');
+	}
+	printCode();
+}
 
 function returnToFunction(strArray) {
-    if(scope.length > 0) {                           // after joining strArray by " " => "string santhosh kumar next 0 next 5 next temp"  
-	    let args = strArray.join(" ").split("next")  // after split by "next" => ["string santhosh kumar ", " 0 ", " 5 "," temp "]
-        args = args.map(item => { return typeDefiner(item.trim()) }) // ["santhosh kumar",0,5,temp]
-        console.log(args.join(","))
-		args = args.map( item => {
-			                  if(isNaN(item)) 
-		                         return operationHandler(item)
-							 return item;
-		})
-		scopeAssigner(`return ${args.join(" ")}`)
+	if (scope.length == 0) {
+		console.error("You are in Global scope and can't return anything from there");
+		return;
 	}
-	else{
-        console.error('You are in Global scope and can\'t return anything from there')
-        return
-	  }
+
+	let i;
+	for (i = scope.length - 1; i >= 0; i--) {
+		if (scope[i].type == 'function') {
+			scopeAssigner('return ' + strArray.join('_'));
+			return;
+		}
+	}
+
+	console.error("You are in Global scope and can't return anything from there");
 }
 
-function printCode() {
-   // NaNParser()
-    console.log(code.join("\n"))
-	console.log(`code`, code)
-	// this.state.code = code.join("\n")
-	document.querySelector(".language-js").innerHTML = code.join("\n")
-	
-}
-
-function clear() {
-	code = []
-	scope = []
-	printCode()
+export function printCode() {
+	// console.clear()
+	console.log('[JS] PrintCode: called');
+	// NaNParser();
+	console.log(`code`, code, scope);
+	console.log(code.join('\n'));
+	document.querySelector('pre code').innerHTML = code.join('\n');
+	return code.join('\n');
 }
 
 function NaNParser() {
-    code = code.map(item => { 
-        return item.replace(/not_a_number/g, 'NaN')
-    })
+	code = code.map((item) => {
+		item = String(item);
+		return item.replace(/not_a_number/g, 'NaN');
+	});
 }
-
-
-function expand(obj) {
-	for( let i = 0; i < obj.body.length; i++ )
-		 if( typeof obj.body[i] == "object" )
-		     	 return expand(obj.body[i])
- return	obj;	
-}
-
-
 
 function scopeAssigner(data) {
-	if(scope.length > 0){
-		 let scp = expand(scope[scope.length-1])
-		 if( scp.type.startsWith('builtIn') || scp.type.startsWith('call') || (scp.type.startsWith('comment') && scp.body.length > 0) ) {
-		       scopeRemover()
-			   dataFeeder(data)
-		 }
-		 else {
-			   scp.body.push(data)
-		       code.pop()
-		       code.push(scope[scope.length - 1].builder())
-		 }
-    }else {
-        code.push(data)
-    }
-    printCode()
+	if (scope.length > 0) {
+		scope[scope.length - 1].body.push(data);
+	} else {
+		code.push(data);
+	}
+
+	console.log(`[JS] SCOPE ASSIGNER`, data);
+
+	printCode();
 }
 
 function undo() {
-	
-    if(scope.length > 0) {
-		let scp = expand(scope[scope.length - 1])
-		if(scp.body.length > 0) {
-        scp.body.pop()
-		code.pop()
-		code.push(scope[scope.length-1].builder())
-		}
-		else{
-		let inner = false;
-		let outscp = close(scope[scope.length-1], scope[scope.length-1])
-        for( let i = 0; i < outscp.body.length; i++ ) {			
-				if(typeof outscp.body[i] == "object") {
-				  code.pop()
-				  console.log('inscp ' + outscp.body.pop().builder())
-				  code.push(scope[scope.length - 1].builder())
-				  inner = true;
-				 break;
-				}
-			 }
-			  if(!inner) {
-				code.pop()
-		        scope.pop()
-			  }
-		}
-		
-    } else {
-           code.pop()
-    }
-    printCode()
-}
-
-function close(obj, prev) {
-	for( let i = 0; i < obj.body.length; i++ ) {
-		 if( typeof obj.body[i] == "object" ) { 
-	        prev = obj
-		   return close(obj.body[i], prev)
-		 }
+	if (scope.length > 0) {
+		scope[scope.length - 1].body.pop();
+	} else {
+		code.pop();
 	}
-  return prev
+	printCode();
 }
 
 function scopeRemover() {
-	 if( scope.length > 0 ) {
-		code.pop()
-		console.log('before close ' + scope[scope.length - 1].builder())
-		let no_inner = true;
-		let outscp = close(scope[scope.length-1], scope[scope.length-1])
-        for( let i = 0; i < outscp.body.length; i++ ) {			
-				if(typeof outscp.body[i] == "object") {
-				let inscp = outscp.body.pop()
-				console.log('inscp ' + inscp.builder())
-				console.error("closed scope " + inscp.type + "\n")	
-				outscp.body.push(inscp.builder())
-				code.push(scope[scope.length - 1].builder())
-				no_inner = false;
-				break;
-				}
-			 }
-			  if(no_inner) {
-				console.error("closed scope " + scope[scope.length - 1].type + "\n")  
-		        code.push(scope.pop().builder())
-			  }						
+	if (scope.length > 0) {
+		// if (scope[scope.length - 1].type != 'function') {
+		// 	scope.pop();
+		// 	return;
+		// }
+		// let function_data = scope.pop();
+		// console.log('[JS] ScopeRemover: ', function_data);
+		scope.pop();
 	} else {
-		console.error('Already in Global scope')
+		console.error('Already in Global scope');
 	}
-	printCode()	  
+	printCode();
 }
 
 function simpleWordConversions(strArray) {
-	    console.log(strArray.join(" "))
-	    if( scope.length > 0 && expand(scope[scope.length - 1]).type === 'list' ) {
-			strArray = strArray.join(" ").split("next").map( data => { return typeDefiner(data.trim()) } ).join(", ") // first data next plus next b next string data
-	    }else if( strArray.join(" ").startsWith('operation') ) {
-			 strArray = strArray.slice(1).join(" ").split("next").map(data => { return operationCheck(data.trim()) } ).join(" ") // operation first data next plus next b next string data   
+	let string = strArray.join(' ');
+	switch (true) {
+		case string.startsWith('console'):
+			consoling(strArray.slice(1));
+			break;
+		default:
+			// the original default
+			scopeAssigner(string);
+	}
+}
+
+function consoling(strArray) {
+	switch (true) {
+		case strArray.join(' ').startsWith('log'):
+			scopeAssigner(`console.log(${typeDefiner(strArray.slice(1).join(' '))})`);
+	}
+}
+
+function operationsHandler(string) {
+	let operation_arr = operationsParser(string.split(' '));
+	operation_arr = operation_arr.split(' ');
+	let variable_stack = [];
+	let final_output = [];
+
+	operation_arr.forEach((item) => {
+		if (item.match(/[a-zA-Z]+/)) {
+			variable_stack.push(item);
+		} else {
+			final_output.push(typeDefiner(variable_stack.join(' ')));
+			variable_stack = [];
+			if (item.match(/^[0-9\.]+$/)) {
+				final_output.push(item);
+			} else {
+				final_output.push(item);
+			}
 		}
-		else { 
-			 strArray = strArray.join(" ").split("next").map(data => { return typeDefiner(data.trim()) } ).join(" ")
-	    }
-	 dataFeeder(strArray)	
+	});
+	if (variable_stack.length !== 0) {
+		final_output.push(typeDefiner(variable_stack.join(' ')));
+	}
+	return final_output.join(' ');
 }
 
-function consoling(methodName) {
-	console.log(methodName)
-	let scp 
-    switch(true) {
-        case methodName.startsWith('log'):
-		    scp = new Console('log', 'console')
-			break
-		case methodName.startsWith('error'):
-            scp = new Console('error', 'console')
-			break	
-         default:
-            scp = new Console(methodName, 'console')
-			break		 
-	    }
-          if(scope.length > 0 ) {
-			  scopeAssigner(scp)
-		  } else {
-	           scope.push(scp)
-			   code.push(scope[scope.length - 1].builder())
-		  }
-    printCode()
+function operationsParser(operation) {
+	let str = operation.join(' ');
+
+	str = str.replace(/bitwise and/g, '&');
+	str = str.replace(/bitwise or/g, '|');
+	str = str.replace(/bitwise not/g, '~');
+	str = str.replace(/left shift/g, '<<');
+	str = str.replace(/right shift/g, '>>');
+
+	str = str.replace(/plus equal to/g, '+=');
+	str = str.replace(/minus equal to/g, '-=');
+	str = str.replace(/into equal to/g, '*=');
+	str = str.replace(/by equal to/g, '/=');
+	str = str.replace(/percentage equal to/g, '%=');
+
+	str = str.replace(/not triple equal to/g, '!==');
+	str = str.replace(/not equal to/g, '!=');
+	str = str.replace(/triple equal to/g, '===');
+	str = str.replace(/equal to/g, '==');
+	str = str.replace(/greater than/g, '>');
+	str = str.replace(/less than/g, '<');
+	str = str.replace(/greater than equal to/g, '>=');
+	str = str.replace(/less than equal to/g, '<=');
+
+	str = str.replace(/ plus /g, ' + ');
+	str = str.replace(/ minus /g, ' - ');
+	str = str.replace(/ into /g, ' * ');
+	str = str.replace(/ by /g, ' / ');
+	str = str.replace(/ equal to /g, ' = ');
+	str = str.replace(/ increment /g, ' ++ ');
+	str = str.replace(/ decrement /g, ' -- ');
+	str = str.replace(/ percentage /g, ' % ');
+
+	str = str.replace(/ and /g, ' && ');
+	str = str.replace(/ or /g, ' || ');
+	str = str.replace(/ not /g, ' ! ');
+
+	return str;
 }
 
-function operationHandler(operation) {
-	let str = operation
-    
-	str = str.replace(/not a number/g, `NaN`)
-	str = str.replace(/not triple equal/g, `!==`)
-    str = str.replace(/not equal to/g, `!=`)
-    str = str.replace(/equal to/g, `==`)
-    str = str.replace(/triple equal/g, `===`)
-    str = str.replace(/greater/g, `>`)
-    str = str.replace(/less/g, `<`)
-    str = str.replace(/greater than equal/g, `>=`)
-    str = str.replace(/less than equal/g, `<=`)
-    str = str.replace(/mod/g, `%`)  
+function objectMethodCall(string) {
+	let output = '';
+	let str_array = string.split('=');
+	switch (true) {
+		case str_array[0].startsWith('let'):
+			output = 'let ';
+			break;
+		case str_array[0].startsWith('constant'):
+			output = 'const ';
+			break;
+		case str_array[0].startsWith('variable'):
+			output = 'var ';
+			break;
+	}
 
+	// For normal assignment
+	let isDeclarationPresent = output.length > 0;
+	let variable = str_array[0].trim().split(' ').slice(isDeclarationPresent ? 1 : 0).join('_');
+	output = output.concat(`${variable} = `);
+	str_array = str_array[1];
 
-    str = str.replace(/plus equal/g, `+=`)
-    str = str.replace(/minus equal/g, `-=`)
-    str = str.replace(/into equal/g, `*=`)
-    str = str.replace(/by equal/g, `/=`)
-    str = str.replace(/percentage equal/g, `%=`)
-    str = str.replace(/plus/g, `+`)
-    str = str.replace(/minus/g, `-`)
-    str = str.replace(/into/g, `*`)
-    str = str.replace(/by/g, `/`)
-    str = str.replace(/equals/g, `=`)
-    str = str.replace(/increment/g, `++`)
-    str = str.replace(/decrement/g, `--`)
-    str = str.replace(/percentage/g, `%`)  
+	str_array = str_array.split('.');
+	let variable_name = str_array[0].trim();
+	variable_name = variable_name.split(' ').join('_');
 
-	
-	str = str.replace(/bitwise and/g, `&`)
-    str = str.replace(/bitwise or/g, `|`)
-    str = str.replace(/bitwise not/g, `~`)
-    str = str.replace(/left shift/g, `<<`)
-    str = str.replace(/right shift/g, `>>`)
+	str_array = str_array[1].trim().split('of');
+	let method_name = str_array[0].trim();
+	method_name = methodNameCreator(method_name.split(' '));
+	method_name = method_name.replace(/character/g, 'char');
+	// Exclusion Black List
+	switch (true) {
+		case method_name === 'length':
+			scopeAssigner(`${variable_name}.${method_name}`);
+			return;
+		case method_name.startsWith('index') || method_name.startsWith('lastIndex'):
+			method_name += 'Of';
+			break;
+	}
 
-    str = str.replace(/and/g, `&&`)
-    str = str.replace(/or/g, `||`)
-    str = str.replace(/not/g, `!`)
-
-    //let greater = 
-    
-    str = str.replace(/space/g, ' ')
-	str = str.replace(/new line/g, '\n')
-	str = str.replace(/underscore/g, '_')
-	str = str.replace(/hyphen/g, '-')
-	
-    return str;
+	if (string.indexOf('of') === -1) {
+		output = `${variable_name}.${method_name}()`;
+	} else {
+		let args = str_array[1].trim();
+		args = args.split('comma');
+		args = args.map((item) => typeDefiner(item.trim()));
+		output += `${variable_name}.${method_name}(${args})`;
+	}
+	// alert(`{objecttMethodCall} variable = ${variable_name}; method = ${method_name}; args = ${args}`);
+	scopeAssigner(output);
 }
 
-function comment() {
-    let Comment = new SingleLineComment('comment')
-	dataFeeder(Comment)
-}
-   
-function commentCreator( ) {
-	let multiLineComment = new MultiLineComment('multiline comment')
-	dataFeeder(multiLineComment)
+function conditionalCreator(type, condition) {
+	condition = operationsHandler(condition.join(' '));
+	let if_condition = new Condition(type, condition);
+	scopeAssigner(if_condition);
+	scope.push(if_condition);
+	printCode();
 }
 
+function call(array, type, variable) {
+	let index_of = array.indexOf('of');
+	let method_name = array.slice(0, index_of);
+	method_name = methodNameCreator(method_name);
+	let args = array.slice(index_of + 1);
+	args = args.join(' ').split('comma').map((item) => typeDefiner(item.trim()));
 
+	let output = '';
+	if (type) {
+		output += `${type} `;
+	}
 
+	if (variable) {
+		output += `${variable} = `;
+	}
 
-   
+	scopeAssigner(output + `${method_name}(${args})`);
+}
+
+function comment(data) {
+	scopeAssigner('// ' + data.join(' '));
+}
+
+function commentCreator(data) {
+	let comment = new MultiLineComment();
+	scope.push(comment);
+	code.push(comment);
+	data.forEach((item) => {
+		scopeAssigner(item);
+	});
+}
+
+function clear() {
+	code = [];
+	scope = [];
+	console.clear();
+	printCode();
+}
+
+function printer(strArray) {
+	let output = `document.write(${typeDefiner(strArray.join(' '))})`;
+	scopeAssigner(output);
+}

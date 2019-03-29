@@ -1,30 +1,25 @@
-import { processing } from './js'
+// var SpeechRecognition = SpeechRecognition || webkitSpeechRecognition;
+// var SpeechGrammarList = SpeechGrammarList || webkitSpeechGrammarList;
+// var SpeechRecognitionEvent = SpeechRecognitionEvent || webkitSpeechRecognitionEvent;
 
-var SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition
-var SpeechGrammarList = window.SpeechGrammarList || window.webkitSpeechGrammarList
-var SpeechRecognitionEvent = window.SpeechRecognitionEvent || window.webkitSpeechRecognitionEvent
+// const recognition = new SpeechRecognition();
 
-const recognition = new SpeechRecognition()
-let word = "";
-// Keeps works while keep on speaking or Else wait for particular time
-// recognition.interimResults = true    
-// recognition.continuous = true
+// // Keeps works while keep on speaking or Else wait for particular time
+// // recognition.interimResults = true
+// // recognition.continuous = true
 
+// recognition.addEventListener('result', (event) => {
+// 	let word = event.results[0][0].transcript;
+// 	console.log(`Input `, word);
+// 	let commands_arr = word.split('semicolon');
+// 	commands_arr.forEach((command) => processing(command.trim()));
+// });
 
+// // console.log(recognition.grammars)
 
-    // console.log(recognition.grammars)
+// // There's a small issue like thing that after one complete sentence is completed then it ends emitting a 'end' event
+// // To make it continuous
 
-// There's a small issue like thing that after one complete sentence is completed then it ends emitting a 'end' event
-// To make it continuous
+// recognition.addEventListener('end', recognition.start);
 
-
-// say quit to stop the recognition
-recognition.onend = () => {
-     if( word != "quit" )
-        recognition.start()              
-}
-
-
-recognition.start()
-
-export default recognition
+// recognition.start();

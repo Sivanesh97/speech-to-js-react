@@ -1,6 +1,6 @@
 import React, { Component } from 'react';
 import { Toolbar, Icon, ToolbarButton, BackButton } from 'react-onsenui';
-import { Link } from 'react-router-dom';
+import { withRouter } from 'react-router-dom';
 
 class Header extends Component {
 	constructor(props) {
@@ -11,15 +11,15 @@ class Header extends Component {
 		};
 	}
 
+	goBack = () => {
+		this.props.history.goBack();
+	};
+
 	render() {
 		return (
 			<Toolbar>
 				<div className="left">
-					{this.state.isCodeView && (
-						<Link to="/">
-							<BackButton>Back</BackButton>
-						</Link>
-					)}
+					{this.state.isCodeView && <BackButton onClick={this.goBack}>Back</BackButton>}
 				</div>
 				<div className="center">{this.props.title}</div>
 				<div className="right">
@@ -32,4 +32,4 @@ class Header extends Component {
 	}
 }
 
-export default Header;
+export default withRouter(Header);
