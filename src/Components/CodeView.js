@@ -127,19 +127,22 @@ class CodeView extends Component {
 		let data = [];
 		word = event.results[0][0].transcript;
 		console.log(`Input `, word);
-		if (!word.startsWith(`quit`)) {
+
+		if (word.startsWith('change theme')) {
+			this.changeTheme();
+		} else if (!word.startsWith(`quit`)) {
 			await processing(word);
 			data = printCode();
 			await this.setState({ code: data });
 			console.log(data);
 			// this.setState({ code: [] });
+			console.log(`[CodeView] Checking result Code`, data);
+			this.setState({ code: data });
+			document.querySelectorAll('pre code').forEach((block) => {
+				console.log('came here', block);
+				hljs.highlightBlock(block);
+			});
 		}
-		console.log(`[CodeView] Checking result Code`, data);
-		this.setState({ code: data });
-		document.querySelectorAll('pre code').forEach((block) => {
-			console.log('came here', block);
-			hljs.highlightBlock(block);
-		});
 	};
 
 	componentDidMount() {
