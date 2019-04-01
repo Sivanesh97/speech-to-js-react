@@ -68,12 +68,12 @@ self.__precacheManifest = [
     "url": "sivanesh97.github.io/speech-to-code/static/media/Material-Design-Iconic-Font.b351bd62.ttf"
   },
   {
-    "revision": "fdf44bc43e8fa2358bbb7d9165d78455",
-    "url": "sivanesh97.github.io/speech-to-code/static/media/fa-brands-400.fdf44bc4.ttf"
-  },
-  {
     "revision": "e8019d507e8cb51d169ab4f94a0cda12",
     "url": "sivanesh97.github.io/speech-to-code/static/media/fa-brands-400.e8019d50.eot"
+  },
+  {
+    "revision": "fdf44bc43e8fa2358bbb7d9165d78455",
+    "url": "sivanesh97.github.io/speech-to-code/static/media/fa-brands-400.fdf44bc4.ttf"
   },
   {
     "revision": "19e65b89cee273a249fba4c09b951b74",
