@@ -1,6 +1,6 @@
 import React, { Component } from 'react';
 import Header from './Header';
-import { Splitter, SplitterContent, SplitterSide, Page } from 'react-onsenui';
+import { Splitter, SplitterContent, SplitterSide, Page, BottomToolbar } from 'react-onsenui';
 import Run from './Run';
 import SideNavContents from './SideNavContents';
 import './../CodeView.css';
@@ -15,16 +15,17 @@ class CodeView extends Component {
 		super(props);
 
 		this.state = {
-			file_name : this.props.location.state.file_name,
-			code      : '',
-			showRight : false,
-			openRight : false,
-			style     : {
+			file_name       : this.props.location.state.file_name,
+			code            : '',
+			interim_results : '',
+			showRight       : false,
+			openRight       : false,
+			style           : {
 				width  : '100%',
-				height : '100vh'
+				height : '80vh'
 			},
-			style_id  : -1,
-			style_arr : [
+			style_id        : -1,
+			style_arr       : [
 				'a11y-dark.min.css',
 				'a11y-light.min.css',
 				'agate.min.css',
@@ -131,7 +132,11 @@ class CodeView extends Component {
 		if (word.startsWith('change theme')) {
 			this.changeTheme();
 		} else if (!word.startsWith(`quit`)) {
-			await processing(word);
+			let statements = word.split('over');
+			statements.forEach(async (code) => {
+				await processing(code.trim());
+			});
+			// await processing(word);
 			data = printCode();
 			await this.setState({ code: data });
 			console.log(data);
@@ -192,7 +197,6 @@ class CodeView extends Component {
 				return line.replace('write(', "write('<br>' + ");
 			} else return line;
 		});
-		alert(parsed.join('\n'));
 		return parsed.join('\n');
 	};
 
@@ -231,6 +235,10 @@ class CodeView extends Component {
 										</code>
 									</pre>
 								</div>
+								<BottomToolbar modifier="material" id="notifier">
+									{' '}
+									Content{' '}
+								</BottomToolbar>
 							</Page>
 						</SplitterContent>
 						<SplitterSide

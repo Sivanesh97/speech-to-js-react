@@ -297,6 +297,7 @@ function assignArguments(strArray) {
 
 function returnToFunction(strArray) {
 	if (scope.length == 0) {
+		document.querySelector('#notifier').textContent = 'In Global Scope and Cannot return anything';
 		console.error("You are in Global scope and can't return anything from there");
 		return;
 	}
