@@ -14,7 +14,7 @@
 importScripts("https://storage.googleapis.com/workbox-cdn/releases/3.6.3/workbox-sw.js");
 
 importScripts(
-  "/Sivanesh97/speech-to-js-react/precache-manifest.033efcbb76f9c31844d007f8ff9d8b44.js"
+  "/Sivanesh97/speech-to-code/precache-manifest.3808cf6fe0c6319ea73659547746df2c.js"
 );
 
 workbox.clientsClaim();
@@ -28,7 +28,7 @@ self.__precacheManifest = [].concat(self.__precacheManifest || []);
 workbox.precaching.suppressWarnings();
 workbox.precaching.precacheAndRoute(self.__precacheManifest, {});
 
-workbox.routing.registerNavigationRoute("/Sivanesh97/speech-to-js-react/index.html", {
+workbox.routing.registerNavigationRoute("/Sivanesh97/speech-to-code/index.html", {
   
   blacklist: [/^\/_/,/\/[^\/]+\.[^\/]+$/],
 });
